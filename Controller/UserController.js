@@ -61,12 +61,16 @@ exports.getSingleUser = async (req, res, next) => {
 
 exports.addUser = async (req, res, next) => {
     const data = req.body;
+    console.log("addUser called with payload:", data);
     try {
         const isUserExists = await UserModel.findOne({ email: data.email });
+        console.log("existing user check", isUserExists);
         if (isUserExists) {
             next(createError(500, "Email Already exists"));
         } else {
-            const isFirstUser = (await UserModel.countDocuments()) === 0;
+            const count = await UserModel.countDocuments();
+            const isFirstUser = count === 0;
+            console.log("number of users in db", count, "first?", isFirstUser);
             // allow client to request a recruiter role at registration
             if (!isFirstUser) {
                 // if role provided and valid, use it; otherwise default to 'user'
@@ -81,7 +85,9 @@ exports.addUser = async (req, res, next) => {
             }
 
             const newUser = new UserModel(data);
+            console.log("saving new user to Mongo:", newUser);
             const result = await newUser.save();
+            console.log("save result", result);
 
             res.status(200).json({
                 status: true,
@@ -89,6 +95,7 @@ exports.addUser = async (req, res, next) => {
             });
         }
     } catch (error) {
+        console.error("addUser error", error);
         next(createError(500, error.message));
     }
 };
@@ -120,12 +127,15 @@ exports.loginUser = async (req, res, next) => {
 
                 const one_day = 1000 * 60 * 60 * 24; //since token expire in 1day
 
+                // cookies must be sent over HTTPS when `secure: true`,
+                // which breaks on localhost. make secure conditional so dev works.
                 res.cookie(process.env.COOKIE_NAME, TOKEN, {
                     expires: new Date(Date.now() + one_day),
-                    secure: true, // Sent only over HTTPS
-                    httpOnly: true, // Restricts access from client-side scripts
-                    signed: true, // Helps keep the cookie secure
-                    sameSite: "None",
+                    secure: process.env.NODE_ENV === "production", // only use secure flag in prod
+                    httpOnly: true, // restricts access from client-side scripts
+                    signed: true, // helps keep the cookie tamper-proof
+                    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+                    // when not in prod, Lax or default allows local testing
                 });
                 res.status(200).json({
                     status: true,
