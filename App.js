@@ -7,10 +7,26 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 
 // Middlewares
 app.use(express.json());
+
+// CORS configuration - allow local dev and deployed frontends
+const allowedOrigins = [
+    "http://localhost:5173", // local Vite dev
+    "https://job-portal-frontend-p1qk.onrender.com", // deployed Render frontend
+    // Add more origins as needed for different environments
+];
+
 app.use(
     cors({
-        origin: ["http://localhost:5173"],
-        methods: ["GET,POST,DELETE,PUT,PATCH"],
+        origin: function (origin, callback) {
+            // allow requests with no origin (like mobile apps or curl requests)
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error("Not allowed by CORS"));
+            }
+        },
+        methods: ["GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
         credentials: true,
     })
 );
