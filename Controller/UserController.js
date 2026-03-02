@@ -127,15 +127,21 @@ exports.loginUser = async (req, res, next) => {
 
                 const one_day = 1000 * 60 * 60 * 24; //since token expire in 1day
 
-                // cookies must be sent over HTTPS when `secure: true`,
-                // which breaks on localhost. make secure conditional so dev works.
+                // log some request info for debugging
+                console.log("loginUser called, origin:", req.headers.origin);
+                console.log("loginUser headers:", req.headers);
+
+                // cookies must be sent over HTTPS when `secure: true`, which breaks on
+                // localhost. use None for sameSite so that cross-port POSTs (login) work
+                // during development.  the browser will require Secure if sameSite=None,
+                // but Secure=false is allowed on localhost.
+                console.log("setting auth cookie, NODE_ENV=", process.env.NODE_ENV);
                 res.cookie(process.env.COOKIE_NAME, TOKEN, {
                     expires: new Date(Date.now() + one_day),
-                    secure: process.env.NODE_ENV === "production", // only use secure flag in prod
+                    secure: true, // use secure always; localhost is considered secure by browsers
                     httpOnly: true, // restricts access from client-side scripts
-                    signed: true, // helps keep the cookie tamper-proof
-                    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-                    // when not in prod, Lax or default allows local testing
+                    signed: true, // keeps cookie tamper-proof
+                    sameSite: "None", // required for cross-site POSTs (login) to deliver cookie
                 });
                 res.status(200).json({
                     status: true,
