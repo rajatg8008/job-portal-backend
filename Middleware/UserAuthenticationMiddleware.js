@@ -3,8 +3,10 @@ const jwt = require("jsonwebtoken");
 const UserModel = require("../Model/UserModel");
 
 exports.authenticateUser = async (req, res, next) => {
-    const token = req.signedCookies[process.env.COOKIE_NAME];
     console.log("authenticateUser middleware invoked");
+    console.log("  all cookies:", req.cookies);
+    console.log("  all signed cookies:", req.signedCookies);
+    const token = req.signedCookies[process.env.COOKIE_NAME];
     console.log(`  received cookie token: ${token}`);
 
     if (!token) {
