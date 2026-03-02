@@ -38,13 +38,15 @@ exports.getMe = async (req, res, next) => {
 
 exports.logOut = async (req, res, next) => {
     try {
-        res.cookie(process.env.COOKIE_NAME, "", {
-            sameSite: "none",
-            secure: true,
+        // use same secure logic as login so browser will clear the cookie correctly
+        const logoutOpts = {
+            sameSite: "None",
+            secure: process.env.NODE_ENV === "production",
             httpOnly: true,
             expires: new Date(0), // Set to a date in the past
             path: "/", // Ensure this matches the path set during login
-        })
+        };
+        res.cookie(process.env.COOKIE_NAME, "", logoutOpts)
             .status(200)
             .json({
                 status: true,
@@ -131,18 +133,18 @@ exports.loginUser = async (req, res, next) => {
                 console.log("loginUser called, origin:", req.headers.origin);
                 console.log("loginUser headers:", req.headers);
 
-                // cookies must be sent over HTTPS when `secure: true`, which breaks on
-                // localhost. use None for sameSite so that cross-port POSTs (login) work
-                // during development.  the browser will require Secure if sameSite=None,
-                // but Secure=false is allowed on localhost.
-                console.log("setting auth cookie, NODE_ENV=", process.env.NODE_ENV);
-                res.cookie(process.env.COOKIE_NAME, TOKEN, {
+                // cookies must be sent over HTTPS when `secure: true`.  Set the flag in
+                // production only (Render/prod domains are HTTPS); running locally over
+                // http will prevent the browser from storing the cookie otherwise.
+                const cookieOptions = {
                     expires: new Date(Date.now() + one_day),
-                    secure: true, // use secure always; localhost is considered secure by browsers
+                    secure: process.env.NODE_ENV === "production",
                     httpOnly: true, // restricts access from client-side scripts
                     signed: true, // keeps cookie tamper-proof
                     sameSite: "None", // required for cross-site POSTs (login) to deliver cookie
-                });
+                };
+                console.log("setting auth cookie, options:", cookieOptions, "NODE_ENV=", process.env.NODE_ENV);
+                res.cookie(process.env.COOKIE_NAME, TOKEN, cookieOptions);
                 res.status(200).json({
                     status: true,
                     message: "Login Successfully",
